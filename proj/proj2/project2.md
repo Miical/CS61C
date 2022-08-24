@@ -332,3 +332,511 @@ outer_loop_end:
     ret
 ```
 
+## Part B: File Operations and Main
+
+### Task 1: Read Matrix
+
+In `read_matrix.s`, implement the `read_matrix` function which uses the file operations we described above to read a binary matrix file into memory. If any file operation fails or doesn’t return the expected number of bytes, you must exit the program with specify exit codes.
+
+```assembly
+.globl read_matrix
+
+.text
+# ==============================================================================
+# FUNCTION: Allocates memory and reads in a binary file as a matrix of integers
+#   If any file operation fails or doesn't read the proper number of bytes,
+#   exit the program with exit code 1.
+# FILE FORMAT:
+#   The first 8 bytes are two 4 byte ints representing the # of rows and columns
+#   in the matrix. Every 4 bytes afterwards is an element of the matrix in
+#   row-major order.
+# Arguments:
+#   a0 (char*) is the pointer to string representing the filename
+#   a1 (int*)  is a pointer to an integer, we will set it to the number of rows
+#   a2 (int*)  is a pointer to an integer, we will set it to the number of columns
+# Returns:
+#   a0 (int*)  is the pointer to the matrix in memory
+#
+# If you receive an fopen error or eof, 
+# this function exits with error code 50.
+# If you receive an fread error or eof,
+# this function exits with error code 51.
+# If you receive an fclose error or eof,
+# this function exits with error code 52.
+# ==============================================================================
+read_matrix:
+	addi sp, sp, -20
+    sw s0, 0(sp)
+    sw s1, 4(sp)
+    sw s2, 8(sp)
+    sw s3, 12(sp)
+    sw ra, 16(sp)
+    
+    mv s0, a0
+    mv s1, a1
+    mv s2, a2
+    
+    # fopen 
+    mv a1, s0
+    li a2 0
+  	jal fopen
+    li t0, -1
+    beq a0, t0, error_50
+    mv s0, a0 # s0 now is the file pointer
+    
+    # (fread) read row number
+    mv a1, s0
+    mv a2, s1
+   	li a3, 4
+    jal fread
+    li t0, 4
+   	bne a0, t0, error_51
+    lw s1, 0(s1) # s1 now is the row number
+    
+    # (fread) read column number
+    mv a1, s0
+    mv a2, s2
+   	li a3, 4
+    jal fread
+    li t0, 4
+   	bne a0, t0, error_51
+    lw s2, 0(s2) # s2 now is the column number
+    
+    # malloc
+   	li a0, 4
+    mul a0, a0, s1
+    mul a0, a0, s2
+    jal malloc
+   	mv s3, a0 # s3 is the memory address 
+    
+    # (fread) read matrix
+    mv a1, s0
+    mv a2, s3
+   	li a3, 4
+    mul a3, a3, s1
+    mul a3, a3, s2
+    jal fread
+    li t0, 4
+    mul t0, t0, s1
+    mul t0, t0, s2
+   	bne a0, t0, error_51
+    
+    # fclose
+   	mv a1, s0
+    jal fclose
+    bne a0, x0, error_52
+    
+    mv a0, s3
+
+    lw s0, 0(sp)
+    lw s1, 4(sp)
+    lw s2, 8(sp)
+    lw s3, 12(sp)
+    lw ra, 16(sp)
+	addi sp, sp, 20
+    
+	ret
+
+error_1:
+	li a1, 1
+    jal exit2
+error_50:
+	li a1, 50
+    jal exit2
+error_51:
+	li a1, 51
+    jal exit2   
+error_52:
+	li a1, 52
+    jal exit2
+```
+
+```assembly
+.import ../../src/read_matrix.s
+.import ../../src/utils.s
+
+.data
+file_path: .asciiz "inputs/test_read_matrix/test_input.bin"
+
+.text
+main:
+    # Read matrix into memory
+    li a0, 4
+    jal malloc
+    mv s1, a0
+    li a0, 4
+    jal malloc
+    mv s2, a0
+    
+    la a0, file_path
+    mv a1, s1
+    mv a2, s2
+    jal read_matrix
+	mv s0, a0
+
+    # Print out elements of matrix
+    mv s0, a0
+	lw a1, 0(s1)
+    lw a2, 0(s2)
+    jal print_int_array
+
+    # Terminate the program
+	jal exit
+```
+
+### Task 2: Write Matrix
+
+In `write_matrix.s`, implement the `write_matrix` function which uses the file operations we described above to write from memory to a binary matrix file. The file must follow the format described in the background section above. Like with `read_matrix`, iff any file operation fails or doesn’t return the expected number of bytes, you must exit the program with specify exit codes.
+
+```assembly
+.globl write_matrix
+
+.text
+# ==============================================================================
+# FUNCTION: Writes a matrix of integers into a binary file
+#   If any file operation fails or doesn't write the proper number of bytes,
+#   exit the program with exit code 1.
+# FILE FORMAT:
+#   The first 8 bytes of the file will be two 4 byte ints representing the
+#   numbers of rows and columns respectively. Every 4 bytes thereafter is an
+#   element of the matrix in row-major order.
+# Arguments:
+#   a0 (char*) is the pointer to string representing the filename
+#   a1 (int*)  is the pointer to the start of the matrix in memory
+#   a2 (int)   is the number of rows in the matrix
+#   a3 (int)   is the number of columns in the matrix
+# Returns:
+#   None
+#
+# If you receive an fopen error or eof, 
+# this function exits with error code 53.
+# If you receive an fwrite error or eof,
+# this function exits with error code 54.
+# If you receive an fclose error or eof,
+# this function exits with error code 55.
+# ==============================================================================
+write_matrix:
+	addi sp, sp, -24
+    sw s0, 0(sp)
+    sw s1, 4(sp)
+    sw s2, 8(sp)
+    sw s3, 12(sp)
+    sw s4, 16(sp)
+    sw ra, 20(sp)
+    
+    mv s0, a0
+    mv s1, a1
+    mv s2, a2
+    mv s3, a3
+    
+    # fopen 
+    mv a1, s0
+    li a2 1
+  	jal fopen
+    li t0, -1
+    beq a0, t0, error_53
+    mv s0, a0 # s0 now is the file pointer
+
+	# (fwrite) write line and column number
+    li a0, 4
+    jal malloc
+    mv s4, a0
+    
+    sw s2, 0(s4)
+    mv a1, s0
+    mv a2, s4
+    li a3, 1
+   	li a4, 4
+    jal fwrite
+    bne a0, a3, error_54
+    
+	sw s3, 0(s4)
+    mv a1, s0
+    mv a2, s4
+    li a3, 1
+   	li a4, 4
+    jal fwrite
+    bne a0, a3, error_54
+    
+    mv a0, s4
+    jal free    
+    
+	# (fwrite) write matrix
+    mv a1, s0
+    mv a2, s1
+    mv a3, s2
+    mul a3, a3, s3
+    li a4 4
+   	jal fwrite
+    bne a0, a3, error_54
+
+	# fclose
+    mv a1, s0
+    jal fclose
+    bne a0, x0, error_55
+
+    # Epilogue
+    lw s0, 0(sp)
+    lw s1, 4(sp)
+    lw s2, 8(sp)
+    lw s3, 12(sp)
+    lw s4, 16(sp)
+    lw ra, 20(sp)
+	addi sp, sp, 24
+
+    ret
+
+error_1:
+	li a1, 1
+    jal exit2
+error_53:
+	li a1, 53
+    jal exit2
+error_54:
+	li a1, 54
+    jal exit2
+error_55:
+	li a1, 55
+    jal exit2
+
+
+```
+
+```assembly
+.import ../../src/write_matrix.s
+.import ../../src/utils.s
+
+.data
+m0: .word 1, 2, 3, 4, 5, 6, 7, 8, 9 # MAKE CHANGES HERE TO TEST DIFFERENT MATRICES
+file_path: .asciiz "outputs/test_write_matrix/student_write_outputs.bin"
+
+.text
+main:
+    # Write the matrix to a file
+    la a0, file_path
+    la a1, m0
+    li a2, 3
+    li a3, 3
+   	jal write_matrix
+
+    # Exit the program
+	j exit
+```
+
+### Task 3: Putting it all Together
+
+In `classify.s`, implement the `classify` function. This will bring together everything you’ve written so far, and create a basic sequence of functions that will allow you to classifiy the preprocessed MNIST inputs using the pretrained matrices we’ve provided. You may need to malloc space when reading in matrices and computing the layers of the network, but remember to always free all data allocated at the end of this process. More information about the `free` function is available in `utils.s` and the background section above. The classify function will be wrapped by the `main.s` file meaning you still must follow calling convention! The `main.s` file, in what we gave you, is a dummy main which will directly call your `classify` function (and pass in the command line arguments) though it could always do more than that!
+
+```assembly
+.globl classify
+
+.text
+classify:
+    # =====================================
+    # COMMAND LINE ARGUMENTS
+    # =====================================
+    # Args:
+    #   a0 (int)    argc
+    #   a1 (char**) argv
+    #   a2 (int)    print_classification, if this is zero, 
+    #               you should print the classification. Otherwise,
+    #               this function should not print ANYTHING.
+    # Returns:
+    #   a0 (int)    Classification
+    # 
+    # If there are an incorrect number of command line args,
+    # this function returns with exit code 49.
+    #
+    # Usage:
+    #   main.s -m -1 <M0_PATH> <M1_PATH> <INPUT_PATH> <OUTPUT_PATH>
+	li t0, 5
+	bne a0, t0, error_49
+
+    addi sp, sp, -40
+    sw s0, 0(sp)
+    sw s1, 4(sp)
+    sw s2, 8(sp)
+    sw s3, 12(sp)
+    sw s4, 16(sp)
+    sw s5, 20(sp)
+    sw s6, 24(sp)
+    sw s7, 28(sp)
+	sw s8, 32(sp)
+    sw ra, 36(sp)
+
+	lw s0, 4(a1) # s0 is the path of m0 matrix
+    lw s1, 8(a1) # s1 is the path of m1 matrix
+    lw s2, 12(a1) # s2 is the path of input matrix 
+    lw s3, 16(a1) # s3 is the output path
+    mv s8, a2
+
+	# =====================================
+    # LOAD MATRICES
+    # =====================================
+	li a0, 8
+    jal malloc
+    mv s4, a0 # s4 is the temporary memory to story m0's h, w
+    mv a0, s0
+    mv a1, s4
+    mv a2, s4
+    addi a2, a2, 4
+    jal read_matrix
+    mv s0, a0 # s0 now is the pointer to m0
+    
+    li a0, 8
+    jal malloc
+    mv s5, a5 # s4 is the temporary memory to story m1's h, w
+    mv a0, s1
+    mv a1, s5
+    mv a2, s5
+    addi a2, a2, 4
+    jal read_matrix
+    mv s1, a0 # s1 now is the pointer to m1
+    
+    li a0, 8
+    jal malloc
+    mv s6, a0 # s4 is the temporary memory to story iuput's h, w
+    mv a0, s2
+    mv a1, s6
+    mv a2, s6
+    addi a2, a2, 4
+    jal read_matrix
+    mv s2, a0 # s2 now is the pointer to input matrix
+
+    # =====================================
+    # RUN LAYERS
+    # =====================================
+    # 1. LINEAR LAYER:    m0 * input
+    # 2. NONLINEAR LAYER: ReLU(m0 * input)
+    # 3. LINEAR LAYER:    m1 * ReLU(m0 * input)
+
+	
+    # 1. m0 * input
+    
+   	# hidden_layer result memory
+    lw a1, 0(s4)
+    lw a5, 4(s6)
+    li a0, 4
+    mul a0, a0, a1
+    mul a0, a0, a5
+    jal malloc
+    mv s7, a0 # s7 is pointer to result
+	
+   	mv a0, s0
+    lw a1, 0(s4)
+    lw a2, 4(s4)
+    mv a3, s2
+    lw a4, 0(s6)
+    lw a5, 4(s6)
+    mv a6, s7
+    jal matmul
+    
+  	  # m0 = m0 * input (set s0, [s4])
+    mv a0, s0
+    jal free
+    mv s0, s7
+    lw a1, 0(s4)
+    lw a5, 4(s6)
+    sw a5, 4(s4)
+    
+    
+    # 2. ReLU(m0 * input)
+	mv a0, s0
+    mul a1, a1, a5
+    jal relu
+    
+    # 3. m1 * ReLU(m0 * input)
+    
+	lw t0, 0(s5)
+    lw t1, 4(s4)
+    li a0, 4
+    mul a0, a0, t0
+    mul a0, a0, t1
+    jal malloc
+    mv s7, a0 # s7 is the pointer to result
+    
+    mv a0, s1
+    lw a1, 0(s5)
+    lw a2, 4(s5)
+    mv a3, s0
+    lw a4, 0(s4)
+    lw a5, 4(s4)
+    mv a6, s7
+    jal matmul
+    
+    # m1 = m1 * ()
+    mv a0, s1
+    jal free
+    mv s1, s7
+    lw t0, 0(s5)
+    lw t1, 4(s4)
+    sw t1, 4(s5)
+    
+    # =====================================
+    # WRITE OUTPUT
+    # =====================================
+    # Write output matrix
+
+	mv a0, s3
+    mv a1, s2
+    lw a2, 0(s5)
+    lw a3, 4(s5)
+    jal write_matrix
+
+    # =====================================
+    # CALCULATE CLASSIFICATION/LABEL
+    # =====================================
+    # Call argmax
+	mv a0, s1
+    lw a1, 0(s5)
+    lw t0, 4(s5)
+    mul a1, a1, t0
+    jal argmax
+    mv s7, a0 # s7 is the result
+
+    bne s8, x0, not_print
+    # Print classification
+    
+	mv a1, s7
+    jal print_int
+
+    # Print newline afterwards for clarity
+	li a1 '\n'
+    jal print_char
+not_print:
+    mv a0, s0
+    jal free
+    mv a0, s1
+    jal free
+    mv a0, s2
+    jal free
+    mv a0, s4
+    jal free
+    mv a0, s5
+    jal free
+    mv a0, s6
+    jal free
+
+    mv a0, s7
+
+    lw s0, 0(sp)
+    lw s1, 4(sp)
+    lw s2, 8(sp)
+    lw s3, 12(sp)
+    lw s4, 16(sp)
+    lw s5, 20(sp)
+    lw s6, 24(sp)
+    lw s7, 28(sp)
+    lw s8, 32(sp)
+    lw ra, 36(sp)
+    addi sp, sp, 40
+
+    ret
+
+error_49:
+	li a1, 49
+    jal exit2
+    
+
+```
+

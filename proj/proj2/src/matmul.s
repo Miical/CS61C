@@ -87,7 +87,7 @@ inner_loop_start:
     
     jal ra dot
     
-    mul t0, s2, s7
+    mul t0, s5, s7
     add t0, t0, s8
     li t1, 4
     mul t0, t0, t1
