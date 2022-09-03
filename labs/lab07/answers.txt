@@ -1,51 +1,51 @@
 Exercise 1
 	Scenario 1
-		1. 
-		2.
-		3.
+		1. Because [Cache Size] in bytes is exactly equal to [Step Size].
+		2. Constant
+		3. Change [Block Size] to [32].
 
 	Scenario 2
-		1.
-		2.
-		3.
-		4.
-		5.
+		1. 2
+		2. miss hit hit hit
+		3. 3 hit of 4 accesses
+		4. 100% 
+		5. we should split the array in equal part whose size is just equal to our  cache size, and then try to access each part of the array at a time and apply all of the function to that part so we can be completely done with it before moving on, thereby keeping that part hot in the cache and not having to circle back to it later on!
 
 	Scenario 3
-		1.
-		2.
-		3.
-		4.
-		5.
+		1. 50% 0% 50%
+		2. 32 16
+		3. 16, L1 miss -> L2
+		4. increase block size
+		5. constant, increase
 
 Exercise 2
-	ijk:
-	ikj:
-	jik:
-	jki:
-	kij:
-	kji:
+    ijk:	n = 1000, 2.398 Gflop/s
+    ikj:	n = 1000, 4.774 Gflop/s
+    jik:	n = 1000, 2.390 Gflop/s
+    jki:	n = 1000, 27.089 Gflop/s
+    kij:	n = 1000, 4.634 Gflop/s
+    kji:	n = 1000, 21.379 Gflop/s
 
-	1.
-	2.
-	3.
+	1. jki
+	2. ijk
+	3. More stride in the innermost loop, the worse it is.
 
 Exercise 3
 	Part 1
-		blocksize = 20, n = 100: 
-		blocksize = 20, n = 1000: 
-		blocksize = 20, n = 2000: 
-		blocksize = 20, n = 5000: 
-		blocksize = 20, n = 10000: 
+		blocksize = 20, n = 100: 0.011 vs 0.015
+		blocksize = 20, n = 1000: 1.013 vs 1.144
+		blocksize = 20, n = 2000: 2.505 vs 2.975
+		blocksize = 20, n = 5000: 74.081 vs 20.764
+		blocksize = 20, n = 10000: 358.192 vs 121.349
 
-		1.
-		2.
+		1. 20 5000
+		2. ...
 
 	Part 2
-		blocksize = 50, n = 10000:
-		blocksize = 100, n = 10000:
-		blocksize = 500, n = 10000:
-		blocksize = 1000, n = 10000:
-		blocksize = 5000, n = 10000:
+		blocksize = 50, n = 10000: 208.553 vs 70.673
+		blocksize = 100, n = 10000: 209.874 vs 72.563
+		blocksize = 500, n = 10000: 201.801 vs 80.581
+		blocksize = 1000, n = 10000: 205.504 vs 79.648
+		blocksize = 5000, n = 10000: 219.463 vs 225.624
 
-		1.
+		1. ...
