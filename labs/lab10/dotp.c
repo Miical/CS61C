@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <omp.h>
+#include </opt/homebrew/include/omp.h>
 
 int array_size = 10000000;
 

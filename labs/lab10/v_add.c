@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <omp.h>
+#include </opt/homebrew/include/omp.h>
 
 #define ARRAY_SIZE 10000000
 #define REPEAT     100
@@ -18,17 +18,27 @@ void v_add_naive(double* x, double* y, double* z) {
 void v_add_optimized_adjacent(double* x, double* y, double* z) {
      #pragma omp parallel
 	{
-		for(int i=0; i<ARRAY_SIZE; i++)
+        int threadsNum = omp_get_num_threads();
+		for(int i=omp_get_thread_num(); i<ARRAY_SIZE; i+=threadsNum)
 			z[i] = x[i] + y[i];
 	}
 }
 
 // Edit this function (Method 2) 
 void v_add_optimized_chunks(double* x, double* y, double* z) {
-          #pragma omp parallel
+      #pragma omp parallel
 	{
-		for(int i=0; i<ARRAY_SIZE; i++)
-			z[i] = x[i] + y[i];
+        int threadsNum = omp_get_num_threads();
+        if (threadsNum > ARRAY_SIZE) threadsNum = ARRAY_SIZE;
+        int presentThread = omp_get_thread_num();
+        if (presentThread < threadsNum) {
+            int blockSize = (ARRAY_SIZE + threadsNum - 1) / threadsNum;
+            int s = presentThread * blockSize;
+            int t = presentThread == threadsNum - 1? ARRAY_SIZE: s + blockSize;
+
+            for (int i = s; i < t; i++) 
+                z[i] = x[i] + y[i];
+        }
 	}
 }
 
